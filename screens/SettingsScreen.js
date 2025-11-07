@@ -1,23 +1,13 @@
-// screens/SettingsScreen.js - CON BOTTONE X E LAYOUT MIGLIORATO
 import { useFocusEffect } from '@react-navigation/native';
 import React, { useState, useCallback } from 'react';
-import {
-  View,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Switch,
-  Alert,
-  TextInput,
+import {View, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert, TextInput,
 } from 'react-native';
 import { Text, Portal, Modal, ActivityIndicator } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-
 import { COLORS, SPACING, BORDER_RADIUS, FONT_SIZES, FONT_WEIGHTS } from '../styles/theme';
 import { commonStyles } from '../styles/commonStyles';
 import GeofenceCard from '../components/GeofenceCard';
-
 import DatabaseService from '../services/DatabaseService';
 import NotificationService from '../services/NotificationService';
 import LocationService from '../services/LocationService';
@@ -27,8 +17,6 @@ export default function SettingsScreen() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [geofences, setGeofences] = useState([]);
   const [showGeofenceModal, setShowGeofenceModal] = useState(false);
-
-  // Geofence form state
   const [geofenceName, setGeofenceName] = useState('');
   const [geofenceRadius, setGeofenceRadius] = useState('100');
 
@@ -93,32 +81,28 @@ export default function SettingsScreen() {
     }
 
     try {
-      const location = await LocationService.getCurrentLocation();
-      await DatabaseService.addGeofence(
-        geofenceName.trim(),
-        location.coords.latitude,
-        location.coords.longitude,
-        radius
-      );
-      Alert.alert('Successo', 'Geofence creato nella tua posizione attuale');
-      setShowGeofenceModal(false);
-      await loadSettings();
+      const location = await LocationService.getCurrentLocation();
+      await DatabaseService.addGeofence(
+        geofenceName.trim(),
+        location.coords.latitude,
+        location.coords.longitude,
+        radius
+      );
+      Alert.alert('Successo', 'Geofence creato nella tua posizione attuale');
+      setShowGeofenceModal(false);
+      await loadSettings();
       await LocationService.startGeofencingMonitoring();
-    } catch (error) {
-      console.error('Error saving geofence:', error);
-      Alert.alert('Errore', 'Impossibile salvare il geofence. Assicurati che i permessi di localizzazione siano attivi.');
-    }
+    } catch (error) {
+      console.error('Errore salvataggio geofence:', error);
+      Alert.alert('Errore', 'Impossibile salvare il geofence. Assicurati che i permessi di localizzazione siano attivi.');
+    }
   };
 
   const handleDeleteGeofence = (geofence) => {
     Alert.alert(
-      'Elimina Geofence',
-      `Vuoi eliminare "${geofence.name}"?`,
-      [
-        { text: 'No', style: 'cancel' },
-        {
-          text: 'Elimina',
-          style: 'destructive',
+      'Elimina Geofence',`Vuoi eliminare "${geofence.name}"?`,
+      [{text: 'No', style: 'cancel' },
+        {text: 'Elimina', style: 'destructive',
           onPress: async () => {
             try {
               await DatabaseService.deleteGeofence(geofence.id);
@@ -126,7 +110,7 @@ export default function SettingsScreen() {
               await loadSettings();
               await LocationService.startGeofencingMonitoring();
             } catch (error) {
-              console.error('Error deleting geofence:', error);
+              console.error('Errore eliminando geofence', error);
               Alert.alert('Errore', 'Impossibile eliminare il geofence');
             }
           }
@@ -140,13 +124,11 @@ export default function SettingsScreen() {
       const stats = await DatabaseService.getGeofenceStats(geofence.id);
       Alert.alert(
         `Statistiche: ${geofence.name}`,
-        `Eventi Totali: ${stats.totalEvents}\n` +
         `Entrate: ${stats.enterCount}\n` +
-        `Uscite: ${stats.exitCount}\n` +
-        `Ultima Visita: ${stats.lastVisit ? new Date(stats.lastVisit).toLocaleString('it-IT') : 'Mai'}`
+        `Uscite: ${stats.exitCount}\n`
       );
     } catch (error) {
-      console.error('Error getting geofence stats:', error);
+      console.error('Errore nel get statistiche', error);
       Alert.alert('Errore', 'Impossibile recuperare le statistiche');
     }
   };
@@ -160,12 +142,13 @@ export default function SettingsScreen() {
       </SafeAreaView>
     );
   }
-
   return (
     <SafeAreaView style={commonStyles.safeArea}>
       <View style={commonStyles.header}>
         <Text style={commonStyles.headerTitle}>Impostazioni</Text>
       </View>
+      
+      <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={commonStyles.section}>
           <Text style={commonStyles.sectionTitle}>Notifiche</Text>
           <View style={commonStyles.box}>
@@ -175,7 +158,7 @@ export default function SettingsScreen() {
                 <View style={styles.settingText}>
                   <Text style={styles.settingTitle}>Abilita Notifiche</Text>
                   <Text style={commonStyles.textSmall}>
-                    Ricevi promemoria e aggiornamenti
+                    Ricevi notifiche quando entri o esci da un'area geofence
                   </Text>
                 </View>
               </View>
@@ -246,8 +229,8 @@ export default function SettingsScreen() {
             </View>
           </View>
         </View>
+      </ScrollView>
 
-      {/* Geofence Modal */}
       <Portal>
         <Modal
           visible={showGeofenceModal}
@@ -259,7 +242,6 @@ export default function SettingsScreen() {
               Nuovo Geofence
             </Text>
           </View>
-
           <Text style={styles.label}>Nome *</Text>
           <TextInput
             style={styles.input}
@@ -268,7 +250,6 @@ export default function SettingsScreen() {
             placeholder="Es. Casa, Ufficio, Università"
             placeholderTextColor={COLORS.textTertiary}
           />
-
           <Text style={styles.label}>Raggio (metri) *</Text>
           <TextInput
             style={styles.input}
@@ -278,14 +259,13 @@ export default function SettingsScreen() {
             placeholderTextColor={COLORS.textTertiary}
             keyboardType="numeric"
           />
-
           <View style={styles.infoBox}>
             <Ionicons name="information-circle-outline" size={20} color={COLORS.primary} />
             <Text style={styles.infoText}>
-              Il geofence verrà creato nella tua posizione GPS attuale
+              Il geofence verrà creato nella tua posizione GPS attuale. 
+              Riceverai notifiche quando entri o esci da quest'area.
             </Text>
           </View>
-
           <TouchableOpacity
             style={[commonStyles.button, { marginTop: SPACING.xl }]}
             onPress={handleSaveGeofence}
@@ -299,80 +279,59 @@ export default function SettingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  scrollView: {
-    flex: 1,
-  },
-
   scrollContent: {
     paddingBottom: SPACING.xxxl,
   },
-
   settingRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  geoSpazio:{
+  geoSpazio: {
     marginTop: 40,
   },
-
   settingInfo: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
     gap: SPACING.md,
   },
-
   settingText: {
     flex: 1,
   },
-
   settingTitle: {
     fontSize: FONT_SIZES.base,
     fontWeight: FONT_WEIGHTS.semibold,
     color: COLORS.text,
     marginBottom: SPACING.xs / 2,
   },
-
   addButton: {
     width: 40, 
     height: 20,
     backgroundColor: COLORS.primary,
     borderRadius: BORDER_RADIUS.md,
-    //padding: 8,
     marginBottom: -35,
   },
-
   emptyGeofences: {
     alignItems: 'center',
     paddingVertical: SPACING.xxxl,
   },
-
   emptyText: {
     marginTop: SPACING.md,
     marginBottom: SPACING.sm,
   },
-
-  dangerBox: {
-    borderWidth: 1,
-    borderColor: COLORS.error + '40',
-    marginTop: SPACING.md,
-  },
-
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: SPACING.md,
   },
-
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: SPACING.lg,
   },
-
   label: {
     fontSize: FONT_SIZES.base,
     fontWeight: FONT_WEIGHTS.semibold,
@@ -380,7 +339,6 @@ const styles = StyleSheet.create({
     marginTop: SPACING.lg,
     marginBottom: SPACING.sm,
   },
-
   input: {
     backgroundColor: COLORS.surfaceVariant,
     borderRadius: BORDER_RADIUS.md,
@@ -390,7 +348,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.borderLight,
   },
-
   infoBox: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -400,15 +357,10 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.md,
     marginTop: SPACING.lg,
   },
-
   infoText: {
     flex: 1,
     fontSize: FONT_SIZES.sm,
     color: COLORS.text,
     lineHeight: 18,
-  },
-  saluti: {
-    marginTop: 180,
-    marginLeft: 130,
   },
 });
