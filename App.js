@@ -1,4 +1,4 @@
-// App.js - CORRETTO CON HEADER CUSTOM
+// App.js - CORRETTO CON GEOFENCE TASK E NOTIFICHE
 
 import React, { useState, useEffect, useCallback } from 'react';
 import * as TaskManager from 'expo-task-manager';
@@ -32,20 +32,22 @@ const GEOFENCE_TASK_NAME = 'geofence-task';
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
 
+// ⭐ TASK MANAGER PER GEOFENCE - Gestisce entrata/uscita dalle aree
 TaskManager.defineTask(GEOFENCE_TASK_NAME, async ({ data, error }) => {
   if (error) {
-    console.error('Errore TaskManager Geofence:', error);
+    console.error('❌ Errore TaskManager Geofence:', error);
     return;
   }
 
   if (data) {
-    const { eventType, region } = data; // region contiene l'identifier che abbiamo dato
+    const { eventType, region } = data;
     
-    // Assicurati che il DB sia inizializzato
+    console.log(`🎯 Geofence Event ricevuto: ${eventType} per ${region.identifier}`);
+    
+    // Inizializza DB e Notifiche se non già fatto
     if (!DatabaseService.db) {
       await DatabaseService.init();
     }
-    // Assicurati che le notifiche siano inizializzate
     if (!NotificationService.isInitialized) {
       await NotificationService.init();
     }
@@ -62,13 +64,13 @@ TaskManager.defineTask(GEOFENCE_TASK_NAME, async ({ data, error }) => {
       const geofence = geofences.find(g => g.id === geofenceId);
       const geofenceName = geofence ? geofence.name : 'un\'area';
 
-      // 3. Invia la notifica
+      // 3. Invia la notifica IMMEDIATA
       await NotificationService.sendGeofenceNotification(geofenceName, event);
 
-      console.log(`Geofence Event: ${event} ${geofenceName} (ID: ${geofenceId})`);
+      console.log(`✅ Geofence Event processato: ${event} in ${geofenceName} (ID: ${geofenceId})`);
       
     } catch (dbError) {
-      console.error('Errore nel salvare evento geofence:', dbError);
+      console.error('❌ Errore nel salvare evento geofence:', dbError);
     }
   }
 });
@@ -76,9 +78,7 @@ TaskManager.defineTask(GEOFENCE_TASK_NAME, async ({ data, error }) => {
 // Previeni auto-hide dello splash screen
 SplashScreen.preventAutoHideAsync();
 
-// ==========================================
 // TEMA DISCORD DARK FISSO
-// ==========================================
 const discordDarkTheme = {
   ...MD3DarkTheme,
   dark: true,
@@ -102,9 +102,7 @@ const discordDarkTheme = {
   },
 };
 
-// ==========================================
-// TAB NAVIGATOR - SENZA BORDI
-// ==========================================
+// TAB NAVIGATOR
 function TabNavigator() {
   return (
     <Tab.Navigator
@@ -130,12 +128,11 @@ function TabNavigator() {
         tabBarShowLabel: false,
         tabBarStyle: {
           backgroundColor: COLORS.surface,
-          borderTopWidth: 0, // RIMOSSO BORDO
-          height: 80, // AUMENTATO per iPhone
-          paddingBottom: 20, // PIÙ SPAZIO per home indicator iPhone
+          borderTopWidth: 0,
+          height: 80,
+          paddingBottom: 20,
           borderTopColor: COLORS.border,
           paddingTop: 8,
-          paddingBottom: 8,
           elevation: 0,
           shadowOpacity: 0,
         },
@@ -202,35 +199,53 @@ export default function App() {
   useEffect(() => {
     async function prepare() {
       try {
-        console.log('Inizializzando il progetto');
+        console.log('🚀 Inizializzando Travel Companion...');
+        
+        // 1. Inizializza Database
         await DatabaseService.init();
-        console.log('Database caricato');
+        console.log('✅ Database inizializzato');
+        
+        // 2. Richiedi permessi localizzazione
         try {
           const permissions = await LocationService.requestPermissions();
-          if (permissions.background) { // Controlla il permesso background
-            console.log('Permessi di localizzazione (Background) concessi');
-            // AVVIA IL GEOFENCING ALL'AVVIO
-            await LocationService.startGeofencingMonitoring(); 
-          } else if (permissions.foreground) {
-            console.log('Permessi di localizzazione (Foreground) concessi');
+          if (permissions.foreground) {
+            console.log('✅ Permessi localizzazione (Foreground) concessi');
+            
+            // Avvia geofencing se ci sono geofence configurati
+            await LocationService.startGeofencingMonitoring();
+            
+            if (permissions.background) {
+              console.log('✅ Permessi localizzazione (Background) concessi');
+            }
           }
         } catch (error) {
-          console.warn('Permessi di localizzazione negati', error);
+          console.warn('⚠️ Permessi localizzazione non concessi', error);
         }
+        
+        // 3. Inizializza Notifiche
         try {
           await NotificationService.init();
+          
+          // IMPORTANTE: Schedula il reminder SOLO UNA VOLTA qui
+          // NON viene più chiamato in init()
           await NotificationService.ensureDailyReminderIsScheduled();
+          
+          console.log('✅ Notifiche inizializzate');
         } catch (error) {
-          console.log('Notifiche negate', error.message);
+          console.log('⚠️ Notifiche non disponibili:', error.message);
         }
+        
+        // 4. Attendi un attimo per completare
         await new Promise(resolve => setTimeout(resolve, 1500));
-        console.log('Tutti i servizi inizializzati');
+        
+        console.log('✅ Inizializzazione completata');
       } catch (error) {
-        console.error('Errore di inizializzazione', error);
+        console.error('❌ Errore di inizializzazione', error);
       } finally {
         setAppIsReady(true);
       }
     }
+    
     prepare();
   }, []);
 
@@ -239,9 +254,11 @@ export default function App() {
       await SplashScreen.hideAsync();
     }
   }, [appIsReady]);
+
   if (!appIsReady) {
     return null;
   }
+
   return (
     <SafeAreaProvider>
       <PaperProvider theme={discordDarkTheme}>

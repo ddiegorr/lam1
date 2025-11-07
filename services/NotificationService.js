@@ -18,25 +18,26 @@ class NotificationService {
 
   async init() {
     try {
-      console.log('Inizializzando le notifiche...');
+      console.log('🔔 Inizializzando le notifiche...');
+      
       const { status: existingStatus } = await Notifications.getPermissionsAsync();
       let finalStatus = existingStatus;
       
-      console.log('Permesso esistente:', existingStatus);
       if (existingStatus !== 'granted') {
-        console.log('Richiedendo permessi per le notifiche');
+        console.log('📝 Richiedendo permessi notifiche');
         const { status } = await Notifications.requestPermissionsAsync();
         finalStatus = status;
-        console.log('Nuovo permesso:', status);
       }
+      
       if (finalStatus !== 'granted') {
-        console.log('Permesso negato');
+        console.log('❌ Permesso notifiche negato');
         this.permissionGranted = false;
         return false;
       }
 
       this.permissionGranted = true;
-      console.log('Permesso concesso');
+      console.log('✅ Permesso notifiche concesso');
+      
       if (Platform.OS === 'android') {
         await Notifications.setNotificationChannelAsync('default', {
           name: 'Default',
@@ -48,28 +49,35 @@ class NotificationService {
       }
 
       this.isInitialized = true;
-      console.log('Notifiche inizializzate con successo');
+      console.log('✅ Notifiche inizializzate');
 
-      await this.scheduleDailyReminder();
+      // IMPORTANTE: NON chiamare scheduleDailyReminder qui!
+      // Viene chiamato solo da ensureDailyReminderIsScheduled in App.js
       
       return true;
     } catch (error) {
-      console.error('Errore inizializzazione notifiche: ', error);
+      console.error('❌ Errore inizializzazione notifiche:', error);
       this.isInitialized = false;
       this.permissionGranted = false;
       return false;
     }
   }
 
+  // Notifica IMMEDIATA quando entri/esci da geofence
   async sendGeofenceNotification(geofenceName, eventType) {
     if (!this.isInitialized || !this.permissionGranted) {
-      console.log('Notifiche non disponibili');
+      console.log('⚠️ Notifiche non disponibili');
       return;
     }
+    
     try {
-      const title = eventType === 'enter' ? 'Area Raggiunta' : 'Area Lasciata';
-      const body = `Hai ${eventType === 'enter' ? 'raggiunto' : 'lasciato'} ${geofenceName}`;
-      console.log(`Inviando le notifiche di geofence: ${title} - ${body}`);
+      const title = eventType === 'enter' 
+        ? '📍 Sei entrato in un\'area' 
+        : '🚶 Hai lasciato un\'area';
+      const body = `${geofenceName}`;
+      
+      console.log(`🔔 Invio notifica geofence: ${title} - ${body}`);
+      
       await Notifications.scheduleNotificationAsync({
         content: {
           title,
@@ -82,26 +90,24 @@ class NotificationService {
           sound: true,
           priority: Notifications.AndroidNotificationPriority.HIGH,
         },
-        trigger: null,
+        trigger: null, // IMMEDIATA
       });
-      console.log('Notifiche geofence inviate');
+      
+      console.log('✅ Notifica geofence inviata');
     } catch (error) {
-      console.error('Errore durante invio delle notifiche:', error);
+      console.error('❌ Errore invio notifica geofence:', error);
     }
   }
 
   async sendJourneyStartedNotification(tripName = 'viaggio') {
     if (!this.isInitialized || !this.permissionGranted) {
-      console.log('Notifiche non disponibili');
       return;
     }
 
     try {
-      console.log('Inviando la notifica di inizio viaggio ');
-
       await Notifications.scheduleNotificationAsync({
         content: {
-          title: 'Viaggio Iniziato!',
+          title: '🚀 Viaggio Iniziato!',
           body: `Il tracciamento di "${tripName}" è iniziato. Buon viaggio!`,
           data: { type: 'journey_started', tripName },
           sound: true,
@@ -109,16 +115,15 @@ class NotificationService {
         },
         trigger: null,
       });
-
-      console.log('Notifica di inzio viaggio inviata');
+      
+      console.log('✅ Notifica inizio viaggio inviata');
     } catch (error) {
-      console.error('Errore durante invio della notifica di inizio viaggio :', error);
+      console.error('❌ Errore notifica inizio viaggio:', error);
     }
   }
 
   async sendJourneyCompletedNotification(journeyData) {
     if (!this.isInitialized || !this.permissionGranted) {
-      console.log('Notifiche non disponibili');
       return;
     }
 
@@ -127,11 +132,9 @@ class NotificationService {
         ? `${(journeyData.totalDistance / 1000).toFixed(1)} km`
         : 'distanza sconosciuta';
 
-      console.log('Notifica del termine del viaggio inviata');
-
       await Notifications.scheduleNotificationAsync({
         content: {
-          title: 'Viaggio Completato!',
+          title: '🏁 Viaggio Completato!',
           body: `Hai percorso ${distance}`,
           data: { type: 'journey_completed', journeyId: journeyData.id },
           sound: true,
@@ -139,55 +142,90 @@ class NotificationService {
         },
         trigger: null,
       });
-
-      console.log('Notifica del termine viaggio inviata');
+      
+      console.log('✅ Notifica fine viaggio inviata');
     } catch (error) {
-      console.error('Errore invio notifica di viaggio terminato:', error);
+      console.error('❌ Errore notifica fine viaggio:', error);
     }
   }
 
-  async scheduleDailyReminder() {
+  async sendPhotoAddedNotification() {
     if (!this.isInitialized || !this.permissionGranted) {
-      console.log('Notifiche non disponibili, impossibile schedulare il reminder.');
       return;
     }
+
     try {
-      // Verifica se esiste già una notifica daily_reminder schedulata
-      const scheduledNotifications = await Notifications.getAllScheduledNotificationsAsync();
-      const existingReminder = scheduledNotifications.find(
-        notif => notif.content.data?.type === 'daily_reminder'
-      );
-
-      if (existingReminder) {
-        console.log('Promemoria giornaliero già schedulato.');
-        return;
-      }
-
-      console.log('Schedulando promemoria giornaliero (ore 10:00)...');
       await Notifications.scheduleNotificationAsync({
         content: {
-          title: "Buongiorno Viaggiatore!",
+          title: '📸 Foto Salvata',
+          body: 'La tua foto è stata aggiunta al viaggio',
+          data: { type: 'photo_added' },
+          sound: false,
+          priority: Notifications.AndroidNotificationPriority.LOW,
+        },
+        trigger: null,
+      });
+    } catch (error) {
+      console.error('Errore notifica foto:', error);
+    }
+  }
+
+  async sendNoteAddedNotification() {
+    if (!this.isInitialized || !this.permissionGranted) {
+      return;
+    }
+
+    try {
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: '📝 Nota Salvata',
+          body: 'La tua nota è stata aggiunta al viaggio',
+          data: { type: 'note_added' },
+          sound: false,
+          priority: Notifications.AndroidNotificationPriority.LOW,
+        },
+        trigger: null,
+      });
+    } catch (error) {
+      console.error('Errore notifica nota:', error);
+    }
+  }
+
+  // NOTIFICA PERIODICA GIORNALIERA - Chiamata SOLO da ensureDailyReminderIsScheduled
+  async scheduleDailyReminder() {
+    if (!this.isInitialized || !this.permissionGranted) {
+      console.log('⚠️ Notifiche non disponibili per schedulare reminder');
+      return;
+    }
+    
+    try {
+      console.log('📅 Schedulando promemoria giornaliero alle 10:00...');
+      
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: "☀️ Buongiorno Viaggiatore!",
           body: "Non dimenticare di registrare i tuoi spostamenti di oggi",
           data: { type: 'daily_reminder' },
           sound: true,
-          priority: Notifications.AndroidNotificationPriority.HIGH,
+          priority: Notifications.AndroidNotificationPriority.DEFAULT,
         },
         trigger: {
-          hour: 10,
-          minute: 0,
+          hour: 23,
+          minute: 14,
           repeats: true,
         },
       });
-      console.log('Promemoria giornaliero schedulato con successo.');
-
+      
+      console.log('✅ Promemoria giornaliero schedulato (ore 10:00, ripetuto)');
     } catch (error) {
-      console.error('Errore durante la schedulazione del promemoria:', error);
+      console.error('❌ Errore schedulazione promemoria:', error);
     }
   }
 
+  // Da chiamare SOLO all'avvio dell'app per verificare/creare il reminder
   async ensureDailyReminderIsScheduled() {
-    // Metodo helper per ri-schedulare se necessario (da chiamare all'avvio dell'app)
     if (!this.isInitialized || !this.permissionGranted) {
+      console.log('⚠️ Notifiche non inizializzate, skip reminder check');
       return;
     }
     
@@ -198,13 +236,13 @@ class NotificationService {
       );
       
       if (!hasReminder) {
-        console.log('Promemoria giornaliero mancante, ri-schedulando...');
+        console.log('⚠️ Promemoria giornaliero mancante, schedulando...');
         await this.scheduleDailyReminder();
       } else {
-        console.log('Promemoria giornaliero già attivo.');
+        console.log('✅ Promemoria giornaliero già attivo');
       }
     } catch (error) {
-      console.error('Errore verifica promemoria:', error);
+      console.error('❌ Errore verifica promemoria:', error);
     }
   }
 

@@ -33,14 +33,14 @@ export default function SettingsScreen() {
         const allGeofences = await DatabaseService.getGeofences();
         setGeofences(allGeofences || []);
       } catch (error) {
-        console.error('Error loading geofences:', error);
+        console.error('Errore caricamento geofences:', error);
         setGeofences([]);
       }
       
       setNotificationsEnabled(true);
       
     } catch (error) {
-      console.error('Error loading settings:', error);
+      console.error('Errore caricamento settings:', error);
       Alert.alert('Errore', 'Impossibile caricare le impostazioni');
     } finally {
       setLoading(false);
@@ -57,7 +57,7 @@ export default function SettingsScreen() {
         Alert.alert('Notifiche', 'Notifiche disabilitate');
       }
     } catch (error) {
-      console.error('Error toggling notifications:', error);
+      console.error('Errore toggle notifiche:', error);
       Alert.alert('Errore', 'Impossibile modificare le notifiche');
     }
   };
@@ -81,18 +81,8 @@ export default function SettingsScreen() {
     }
 
     try {
-      // Verifica permessi background
-      const permissions = await LocationService.requestPermissions();
-      
-      if (!permissions.background) {
-        Alert.alert(
-          'Permesso Background Richiesto',
-          'Per utilizzare il geofencing è necessario il permesso di localizzazione in background. Il geofence verrà creato ma non sarà attivo finché non concedi il permesso.',
-          [{ text: 'OK' }]
-        );
-      }
-
       const location = await LocationService.getCurrentLocation();
+      
       await DatabaseService.addGeofence(
         geofenceName.trim(),
         location.coords.latitude,
@@ -103,10 +93,10 @@ export default function SettingsScreen() {
       setShowGeofenceModal(false);
       await loadSettings();
       
-      // Prova ad avviare il geofencing (se fallisce, non mostra errore all'utente)
+      // Riavvia il geofencing con i nuovi geofence
       await LocationService.startGeofencingMonitoring();
       
-      Alert.alert('Successo', 'Geofence creato nella tua posizione attuale');
+      Alert.alert('✅ Successo', 'Geofence creato nella tua posizione attuale');
     } catch (error) {
       console.error('Errore salvataggio geofence:', error);
       Alert.alert('Errore', 'Impossibile salvare il geofence. Assicurati che i permessi di localizzazione siano attivi.');
@@ -115,17 +105,23 @@ export default function SettingsScreen() {
 
   const handleDeleteGeofence = (geofence) => {
     Alert.alert(
-      'Elimina Geofence',`Vuoi eliminare "${geofence.name}"?`,
-      [{text: 'No', style: 'cancel' },
-        {text: 'Elimina', style: 'destructive',
+      'Elimina Geofence',
+      `Vuoi eliminare "${geofence.name}"?`,
+      [
+        { text: 'No', style: 'cancel' },
+        {
+          text: 'Elimina',
+          style: 'destructive',
           onPress: async () => {
             try {
               await DatabaseService.deleteGeofence(geofence.id);
               Alert.alert('Successo', 'Geofence eliminato');
               await loadSettings();
+              
+              // Riavvia il geofencing per aggiornare
               await LocationService.startGeofencingMonitoring();
             } catch (error) {
-              console.error('Errore eliminando geofence', error);
+              console.error('Errore eliminazione geofence', error);
               Alert.alert('Errore', 'Impossibile eliminare il geofence');
             }
           }
@@ -138,12 +134,12 @@ export default function SettingsScreen() {
     try {
       const stats = await DatabaseService.getGeofenceStats(geofence.id);
       Alert.alert(
-        `Statistiche: ${geofence.name}`,
-        `Entrate: ${stats.enterCount}\n` +
-        `Uscite: ${stats.exitCount}\n`
+        `📊 Statistiche: ${geofence.name}`,
+        `✅ Entrate: ${stats.enterCount}\n` +
+        `🚶 Uscite: ${stats.exitCount}`
       );
     } catch (error) {
-      console.error('Errore nel get statistiche', error);
+      console.error('Errore statistiche geofence', error);
       Alert.alert('Errore', 'Impossibile recuperare le statistiche');
     }
   };
@@ -157,6 +153,7 @@ export default function SettingsScreen() {
       </SafeAreaView>
     );
   }
+
   return (
     <SafeAreaView style={commonStyles.safeArea}>
       <View style={commonStyles.header}>
@@ -257,6 +254,7 @@ export default function SettingsScreen() {
               Nuovo Geofence
             </Text>
           </View>
+          
           <Text style={styles.label}>Nome *</Text>
           <TextInput
             style={styles.input}
@@ -265,6 +263,7 @@ export default function SettingsScreen() {
             placeholder="Es. Casa, Ufficio, Università"
             placeholderTextColor={COLORS.textTertiary}
           />
+          
           <Text style={styles.label}>Raggio (metri) *</Text>
           <TextInput
             style={styles.input}
@@ -274,6 +273,7 @@ export default function SettingsScreen() {
             placeholderTextColor={COLORS.textTertiary}
             keyboardType="numeric"
           />
+          
           <View style={styles.infoBox}>
             <Ionicons name="information-circle-outline" size={20} color={COLORS.primary} />
             <Text style={styles.infoText}>
@@ -281,6 +281,7 @@ export default function SettingsScreen() {
               Riceverai notifiche quando entri o esci da quest'area.
             </Text>
           </View>
+          
           <TouchableOpacity
             style={[commonStyles.button, { marginTop: SPACING.xl }]}
             onPress={handleSaveGeofence}

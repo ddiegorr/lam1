@@ -10,9 +10,9 @@ class DatabaseService {
       this.db = await SQLite.openDatabaseAsync('travel_companion.db');
       await this.createTables();
       await this.migrateDatabase();
-      console.log('Database inizializzato');
+      console.log('✅ Database inizializzato');
     } catch (error) {
-      console.error('Errore inizializzazione database', error);
+      console.error('❌ Errore inizializzazione database', error);
       throw error;
     }
   }
@@ -29,6 +29,7 @@ class DatabaseService {
         await this.db.execAsync('ALTER TABLE trips ADD COLUMN destination_lon REAL');
         console.log('✅ Migrated trips: Added destination_lon');
       }
+      
       const journeysInfo = await this.db.getAllAsync('PRAGMA table_info(journeys)');
       if (!journeysInfo.some(col => col.name === 'trip_id')) {
         await this.db.execAsync('ALTER TABLE journeys ADD COLUMN trip_id INTEGER');
@@ -46,15 +47,16 @@ class DatabaseService {
         await this.db.execAsync('ALTER TABLE journeys ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP');
         console.log('✅ Migrated journeys: Added created_at');
       }
+      
       const geofencesInfo = await this.db.getAllAsync('PRAGMA table_info(geofences)');
       if (!geofencesInfo.some(col => col.name === 'created_at')) {
         await this.db.execAsync('ALTER TABLE geofences ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP');
         console.log('✅ Migrated geofences: Added created_at');
       }
+      
       console.log('✅ Database migration check complete');
     } catch (error) {
       console.error('❌ Migration error:', error);
-      console.warn('⚠️ Migration failed - Database might be in inconsistent state');
       throw error;
     }
   }
@@ -150,9 +152,10 @@ class DatabaseService {
           FOREIGN KEY (geofence_id) REFERENCES geofences (id) ON DELETE CASCADE
         );
       `);
-      console.log('Tabella creata');
+      
+      console.log('✅ Tabelle create');
     } catch (error) {
-      console.error('Errore creazione tabella', error);
+      console.error('❌ Errore creazione tabelle', error);
       throw error;
     }
   }
@@ -217,31 +220,32 @@ class DatabaseService {
     }
   }
 
-  // VIAGGIO
+  // JOURNEYS
   async startJourney(tripId) {
     try {
       const startTime = new Date().toISOString();
-      console.log('Starting journey at:', startTime);
+      console.log('🚀 Starting journey at:', startTime);
       const result = await this.db.runAsync(
         'INSERT INTO journeys (trip_id, start_time, status) VALUES (?, ?, ?)',
         [tripId, startTime, 'active']
       );
-      console.log('Viaggio creato ID:', result.lastInsertRowId);
+      console.log('✅ Journey creato con ID:', result.lastInsertRowId);
       return result.lastInsertRowId;
     } catch (error) {
-      console.error('Errore inizio viaggio', error);
+      console.error('❌ Errore inizio journey', error);
       throw error;
     }
   }
 
   async endJourney(journeyId, totalDistance = 0) {
     try {
+      console.log(`🏁 Terminando journey ${journeyId} con distanza: ${(totalDistance/1000).toFixed(2)}km`);
       await this.db.runAsync(
         'UPDATE journeys SET end_time = ?, total_distance = ?, status = ? WHERE id = ?',
         [new Date().toISOString(), totalDistance, 'completed', journeyId]
       );
     } catch (error) {
-      console.error('Errore fine viaggio', error);
+      console.error('❌ Errore fine journey', error);
       throw error;
     }
   }
@@ -255,17 +259,15 @@ class DatabaseService {
         WHERE j.status = 'active'`
       );
       if (journey) {
-        console.log('Viaggio attivo trovato', {
+        console.log('✅ Journey attivo trovato:', {
           id: journey.id,
           start_time: journey.start_time,
           trip_name: journey.trip_name
         });
-      } else {
-        console.log('Nessun viaggio attivo trovato');
       }
       return journey;
     } catch (error) {
-      console.error('Errore richiesta viaggi attivi', error);
+      console.error('❌ Errore get active journey', error);
       return null;
     }
   }
@@ -285,7 +287,7 @@ class DatabaseService {
       query += ' ORDER BY j.start_time DESC';
       return await this.db.getAllAsync(query, params);
     } catch (error) {
-      console.error('Errore richiesta viaggi', error);
+      console.error('Errore get journeys', error);
       return [];
     }
   }
@@ -298,7 +300,7 @@ class DatabaseService {
         [journeyId, latitude, longitude, new Date().toISOString(), accuracy]
       );
     } catch (error) {
-      console.error('Errore aggiunta punti GPS', error);
+      console.error('Errore aggiunta punto GPS', error);
     }
   }
 
@@ -309,12 +311,12 @@ class DatabaseService {
         [journeyId]
       );
     } catch (error) {
-      console.error('Errore get GPS', error);
+      console.error('Errore get GPS points', error);
       return [];
     }
   }
 
-  // FOTO E NOTE
+  // PHOTOS & NOTES
   async addPhoto(journeyId, uri, latitude = null, longitude = null, note = null) {
     try {
       const result = await this.db.runAsync(
@@ -348,7 +350,7 @@ class DatabaseService {
       );
       return result.lastInsertRowId;
     } catch (error) {
-      console.error('Errore aggiunta note', error);
+      console.error('Errore aggiunta nota', error);
       throw error;
     }
   }
@@ -372,10 +374,10 @@ class DatabaseService {
         'INSERT INTO geofences (name, latitude, longitude, radius) VALUES (?, ?, ?, ?)',
         [name, latitude, longitude, radius]
       );
-      console.log(`Geofence creato ${name} (ID: ${result.lastInsertRowId})`);
+      console.log(`✅ Geofence creato: ${name} (ID: ${result.lastInsertRowId})`);
       return result.lastInsertRowId;
     } catch (error) {
-      console.error('Errore creazione geofence', error);
+      console.error('❌ Errore creazione geofence', error);
       throw error;
     }
   }
@@ -384,7 +386,7 @@ class DatabaseService {
     try {
       return await this.db.getAllAsync('SELECT * FROM geofences ORDER BY created_at DESC');
     } catch (error) {
-      console.error('Errore get Geofence', error);
+      console.error('❌ Errore get geofences', error);
       return [];
     }
   }
@@ -392,9 +394,9 @@ class DatabaseService {
   async deleteGeofence(id) {
     try {
       await this.db.runAsync('DELETE FROM geofences WHERE id = ?', [id]);
-      console.log(`Geofence eliminato (ID: ${id})`);
+      console.log(`✅ Geofence eliminato (ID: ${id})`);
     } catch (error) {
-      console.error('Errore eliminazione geofence', error);
+      console.error('❌ Errore eliminazione geofence', error);
       throw error;
     }
   }
@@ -402,31 +404,35 @@ class DatabaseService {
   async addGeofenceEvent(geofenceId, eventType) {
     try {
       await this.db.runAsync(
-        'INSERT INTO geofence_events (geofence_id, event_type) VALUES (?, ?)',
-        [geofenceId, eventType]
+        'INSERT INTO geofence_events (geofence_id, event_type, timestamp) VALUES (?, ?, ?)',
+        [geofenceId, eventType, new Date().toISOString()]
       );
-      console.log(`Geofence registrato: ${eventType} per ${geofenceId}`);
+      console.log(`✅ Geofence event registrato: ${eventType} per geofence ${geofenceId}`);
     } catch (error) {
-      console.error('Errore aggiunta Geofence', error);
+      console.error('❌ Errore aggiunta geofence event', error);
       throw error;
     }
   }
 
   async getGeofenceStats(geofenceId) {
     try {
+      // QUERY CORRETTA - usa COALESCE per gestire NULL
       const stats = await this.db.getFirstAsync(`
         SELECT 
-          SUM(CASE WHEN event_type = 'enter' THEN 1 ELSE 0 END) as enter_count,
-          SUM(CASE WHEN event_type = 'exit' THEN 1 ELSE 0 END) as exit_count
+          COALESCE(SUM(CASE WHEN event_type = 'enter' THEN 1 ELSE 0 END), 0) as enter_count,
+          COALESCE(SUM(CASE WHEN event_type = 'exit' THEN 1 ELSE 0 END), 0) as exit_count
         FROM geofence_events 
         WHERE geofence_id = ?
       `, [geofenceId]);
+      
+      console.log(`📊 Stats geofence ${geofenceId}:`, stats);
+      
       return {
         enterCount: stats?.enter_count || 0,
         exitCount: stats?.exit_count || 0,
       };
     } catch (error) {
-      console.error('Errore stats Geofence', error);
+      console.error('❌ Errore get geofence stats', error);
       return {
         enterCount: 0,
         exitCount: 0,
@@ -455,6 +461,7 @@ class DatabaseService {
         LEFT JOIN notes n ON j.id = n.journey_id
         WHERE t.start_date >= ?
       `, [startDate.toISOString()]);
+      
       return stats || {};
     } catch (error) {
       console.error('Errore dashboard stats', error);
@@ -468,6 +475,7 @@ class DatabaseService {
       const weeklyPattern = await this.getWeeklyPatternAnalysis();
       const topDestinations = await this.getTopDestinations(3);
       const activeJourney = await this.getActiveJourney();
+      
       return {
         recentTrips: trips.slice(0, 10),
         topDestinations,
@@ -495,7 +503,7 @@ class DatabaseService {
       
       return results;
     } catch (error) {
-      console.error('Errore caricamento pattern settimanale', error);
+      console.error('Errore pattern settimanale', error);
       return [];
     }
   }
@@ -514,7 +522,7 @@ class DatabaseService {
         LIMIT ?
       `, [limit]);
     } catch (error) {
-      console.error('Errore caricamento top destination', error);
+      console.error('Errore top destinations', error);
       return [];
     }
   }
@@ -528,12 +536,12 @@ class DatabaseService {
       await this.db.execAsync('DROP TABLE IF EXISTS gps_points;');
       await this.db.execAsync('DROP TABLE IF EXISTS journeys;');
       await this.db.execAsync('DROP TABLE IF EXISTS trips;');
-      console.log('Tutte le tabelle eliminate');
+      console.log('✅ Tutte le tabelle eliminate');
       
       await this.createTables();
-      console.log('Tabelle ricreate');
+      console.log('✅ Tabelle ricreate');
     } catch (error) {
-      console.error('Errore pulizia dati', error);
+      console.error('❌ Errore pulizia dati', error);
       throw error;
     }
   }

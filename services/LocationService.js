@@ -41,56 +41,61 @@ class LocationService {
 
   async startTracking(journeyId) {
     try {
+      // Se già in tracking, ferma prima
       if (this.isTracking) {
+        console.log('⚠️ Tracking già attivo, fermo il precedente');
         await this.stopTracking();
       }
+      
+      // Reset COMPLETO dello stato
       this.isTracking = true;
       this.currentJourneyId = journeyId;
       this.lastLocation = null;
       this.totalDistance = 0;
+      
+      console.log(`🚀 Tracking INIZIATO per journey ${journeyId} - distanza azzerata a 0`);
+      
       this.locationSubscription = await Location.watchPositionAsync(
         {
           accuracy: Location.Accuracy.High,
-          timeInterval: 5000,
-          distanceInterval: 10,
+          timeInterval: 5000,  // Ogni 5 secondi
+          distanceInterval: 10, // O ogni 10 metri
         },
         (location) => this.handleLocationUpdate(location)
       );
     } catch (error) {
+      console.error('❌ Errore startTracking:', error);
       throw error;
     }
   }
 
   async stopTracking() {
     try {
+      console.log(`🛑 STOP Tracking - Distanza finale: ${(this.totalDistance/1000).toFixed(2)}km`);
+      
       this.isTracking = false;
+      
       if (this.locationSubscription) {
         this.locationSubscription.remove();
         this.locationSubscription = null;
       }
-      if (this.currentJourneyId && this.totalDistance > 0) {
-        await DatabaseService.endJourney(this.currentJourneyId, this.totalDistance);
-      }
+      
       const finalDistance = this.totalDistance;
+      
+      // Reset completo dello stato
       this.currentJourneyId = null;
       this.lastLocation = null;
       this.totalDistance = 0;
+      
       return finalDistance;
     } catch (error) {
+      console.error('❌ Errore stopTracking:', error);
       throw error;
     }
   }
 
   async startGeofencingMonitoring() {
     try {
-      // Verifica i permessi prima di procedere
-      const { status } = await Location.getBackgroundPermissionsAsync();
-      
-      if (status !== 'granted') {
-        console.warn('⚠️ Permesso background location non concesso - geofencing non attivo');
-        return; // Esci silenziosamente senza errore
-      }
-
       // Ferma il monitoraggio esistente se attivo
       const isTaskActive = await Location.hasStartedGeofencingAsync(GEOFENCE_TASK_NAME);
       if (isTaskActive) {
@@ -118,23 +123,32 @@ class LocationService {
 
       // Avvia il monitoraggio
       await Location.startGeofencingAsync(GEOFENCE_TASK_NAME, geofencesToMonitor);
-      console.log(`✅ Geofencing avviato per ${geofences.length} aree`);
+      console.log(`✅ Geofencing ATTIVO per ${geofences.length} aree`);
       
     } catch (error) {
       console.error('❌ Errore startGeofencingMonitoring:', error);
+      // Non lanciare errore - il geofencing è opzionale
     }
   }
 
   async handleLocationUpdate(location) {
     try {
-      if (!this.currentJourneyId || !this.isTracking) return;
+      if (!this.currentJourneyId || !this.isTracking) {
+        console.log('⚠️ Location update ignorato - tracking non attivo');
+        return;
+      }
+      
       const { latitude, longitude, accuracy } = location.coords;
+      
+      // Salva il punto GPS nel database
       await DatabaseService.addGPSPoint(
         this.currentJourneyId,
         latitude,
         longitude,
         accuracy
       );
+      
+      // Calcola distanza solo se abbiamo una posizione precedente valida
       if (this.lastLocation) {
         const distance = this.calculateDistance(
           this.lastLocation.latitude,
@@ -142,10 +156,24 @@ class LocationService {
           latitude,
           longitude
         );
-        this.totalDistance += distance;
+        
+        // Filtro per distanze ragionevoli: 
+        // - minimo 5m (evita rumore GPS)
+        // - massimo 200m tra update (evita salti irrealistici con timeInterval=5s)
+        if (distance >= 5 && distance <= 200) {
+          this.totalDistance += distance;
+          console.log(`📏 +${distance.toFixed(1)}m | Totale: ${(this.totalDistance/1000).toFixed(2)}km | Accuracy: ${accuracy?.toFixed(0)}m`);
+        } else if (distance > 200) {
+          console.warn(`⚠️ Distanza ignorata (troppo grande): ${distance.toFixed(1)}m - possibile salto GPS`);
+        }
+      } else {
+        console.log(`📍 Primo punto GPS registrato: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
       }
+      
+      // Aggiorna l'ultima posizione
       this.lastLocation = { latitude, longitude };
     } catch (error) {
+      console.error('❌ Errore handleLocationUpdate:', error);
     }
   }
 
@@ -155,10 +183,12 @@ class LocationService {
     const φ2 = (lat2 * Math.PI) / 180;
     const Δφ = ((lat2 - lat1) * Math.PI) / 180;
     const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+    
     const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
       Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
+    
+    return R * c; // Distanza in metri
   }
 
   getTrackingStatus() {
