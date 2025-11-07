@@ -81,6 +81,17 @@ export default function SettingsScreen() {
     }
 
     try {
+      // Verifica permessi background
+      const permissions = await LocationService.requestPermissions();
+      
+      if (!permissions.background) {
+        Alert.alert(
+          'Permesso Background Richiesto',
+          'Per utilizzare il geofencing è necessario il permesso di localizzazione in background. Il geofence verrà creato ma non sarà attivo finché non concedi il permesso.',
+          [{ text: 'OK' }]
+        );
+      }
+
       const location = await LocationService.getCurrentLocation();
       await DatabaseService.addGeofence(
         geofenceName.trim(),
@@ -88,10 +99,14 @@ export default function SettingsScreen() {
         location.coords.longitude,
         radius
       );
-      Alert.alert('Successo', 'Geofence creato nella tua posizione attuale');
+      
       setShowGeofenceModal(false);
       await loadSettings();
+      
+      // Prova ad avviare il geofencing (se fallisce, non mostra errore all'utente)
       await LocationService.startGeofencingMonitoring();
+      
+      Alert.alert('Successo', 'Geofence creato nella tua posizione attuale');
     } catch (error) {
       console.error('Errore salvataggio geofence:', error);
       Alert.alert('Errore', 'Impossibile salvare il geofence. Assicurati che i permessi di localizzazione siano attivi.');

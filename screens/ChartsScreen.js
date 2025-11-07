@@ -1,18 +1,17 @@
-import { useFocusEffect } from '@react-navigation/native';
-import React, { useState, useCallback } from 'react';
-import { View, StyleSheet, ScrollView, Dimensions, TouchableOpacity, RefreshControl, TextInput, Alert } from 'react-native';
-import { Text, ActivityIndicator, Portal, Modal } from 'react-native-paper';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import MapView, { Circle, Marker } from 'react-native-maps';
-import { Ionicons } from '@expo/vector-icons';
-import { BarChart } from 'react-native-chart-kit';
-
-import { COLORS, SPACING, BORDER_RADIUS, FONT_SIZES, FONT_WEIGHTS, MAP_DARK_STYLE } from '../styles/theme';
-import { commonStyles } from '../styles/commonStyles';
+import {useFocusEffect} from '@react-navigation/native';
+import React, {useState, useCallback} from 'react';
+import {View, StyleSheet, ScrollView, Dimensions, TouchableOpacity, RefreshControl, TextInput, Alert} from 'react-native';
+import {Text, ActivityIndicator, Portal, Modal} from 'react-native-paper';
+import {SafeAreaView} from 'react-native-safe-area-context';
+import MapView, {Circle, Marker} from 'react-native-maps';
+import {Ionicons} from '@expo/vector-icons';
+import {BarChart} from 'react-native-chart-kit';
+import {COLORS, SPACING, BORDER_RADIUS, FONT_SIZES, FONT_WEIGHTS, MAP_DARK_STYLE} from '../styles/theme';
+import {commonStyles} from '../styles/commonStyles';
 import DatabaseService from '../services/DatabaseService';
 import PredictionService from '../services/PredictionService';
 
-const { width } = Dimensions.get('window');
+const {width} = Dimensions.get('window');
 
 export default function ChartsScreen() {
   const [loading, setLoading] = useState(true);
@@ -20,12 +19,10 @@ export default function ChartsScreen() {
   const [stats, setStats] = useState(null);
   const [predictions, setPredictions] = useState(null);
   const [insights, setInsights] = useState(null);
-  
   const [showPeriodModal, setShowPeriodModal] = useState(false);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
   const [selectedMonth, setSelectedMonth] = useState((new Date().getMonth() + 1).toString());
   const [periodStats, setPeriodStats] = useState(null);
-
   const [heatmapPeriod, setHeatmapPeriod] = useState('month');
   const [heatmapData, setHeatmapData] = useState([]);
   const [mapRegion, setMapRegion] = useState(null);
@@ -52,28 +49,20 @@ export default function ChartsScreen() {
     }
   };
   const processWeeklyData = (patternData) => {
-    // 1. Crea un array di 7 zeri (un contatore per ogni giorno, da Dom=0 a Sab=6)
     const weeklyCounts = Array(7).fill(0);
-    
-    // 2. Se ci sono dati dal database, riempie l'array
     if (patternData && patternData.length > 0) {
       patternData.forEach(day => {
-        // 'day_of_week' è 0 per Domenica, 1 per Lunedì, ecc.
         if (day.day_of_week >= 0 && day.day_of_week <= 6) {
           weeklyCounts[day.day_of_week] = day.journey_count || 0;
         }
       });
     }
-    
-    // 3. Restituisce l'array completo di 7 giorni
     return weeklyCounts;
   };
   const loadHeatmapData = async (period) => {
     try {
       const days = period === 'week' ? 7 : period === 'month' ? 30 : 365;
       const startDate = new Date(Date.now() - days * 86400000).toISOString();
-
-      // Query per ottenere trips con coordinate della destinazione
       const trips = await DatabaseService.db.getAllAsync(
         `SELECT t.id, t.destination, t.destination_lat, t.destination_lon, 
                 COUNT(j.id) as journey_count
@@ -83,29 +72,19 @@ export default function ChartsScreen() {
          GROUP BY t.id, t.destination, t.destination_lat, t.destination_lon`,
         [startDate]
       );
-
-      // DEBUG: Log trips trovati
-      console.log('🗺️ Heatmap - Trips trovati:', trips.length);
-      trips.forEach(t => {
-        console.log(`  - ${t.destination}: lat=${t.destination_lat}, lon=${t.destination_lon}, journeys=${t.journey_count}`);
-      });
-
       const locationMap = new Map();
       for (const trip of trips) {
-        // Skip trips senza journey completati
-        if (trip.journey_count === 0) {
-          console.log(`⚠️ Skip ${trip.destination} - nessun journey completato`);
+        if (trip.journey_count === 0){
           continue;
         }
-
         const key = `${trip.destination_lat.toFixed(3)},${trip.destination_lon.toFixed(3)}`;
         const loc = locationMap.get(key);
-        if (loc) {
+        if (loc){
           locationMap.set(key, { 
             ...loc, 
             visitCount: loc.visitCount + trip.journey_count 
           });
-        } else {
+        }else{
           locationMap.set(key, {
             latitude: trip.destination_lat,
             longitude: trip.destination_lon,
@@ -114,12 +93,8 @@ export default function ChartsScreen() {
           });
         }
       }
-
-      console.log('🗺️ Heatmap - Locations finali:', locationMap.size);
-
       const locations = Array.from(locationMap.values());
       setHeatmapData(locations);
-
       if (locations.length > 0) {
         const lats = locations.map(l => l.latitude);
         const lngs = locations.map(l => l.longitude);
@@ -133,7 +108,6 @@ export default function ChartsScreen() {
         setMapRegion({ latitude: 42.5, longitude: 12.5, latitudeDelta: 8, longitudeDelta: 8 });
       }
     } catch (error) {
-      console.error('Error loading heatmap:', error);
       setHeatmapData([]);
     }
   };
@@ -148,21 +122,17 @@ export default function ChartsScreen() {
       Alert.alert('Errore', 'Non puoi selezionare un periodo futuro');
       return;
     }
-
     try {
       const start = new Date(year, month - 1, 1).toISOString();
       const end = new Date(year, month, 0, 23, 59, 59).toISOString();
-      
       const trips = await DatabaseService.db.getAllAsync(
         'SELECT t.*, COUNT(j.id) as journey_count, SUM(j.total_distance) as total_distance, COUNT(DISTINCT p.id) as photo_count, COUNT(DISTINCT n.id) as note_count FROM trips t LEFT JOIN journeys j ON t.id = j.trip_id AND j.status = "completed" LEFT JOIN photos p ON j.id = p.journey_id LEFT JOIN notes n ON j.id = n.journey_id WHERE t.start_date >= ? AND t.start_date <= ? GROUP BY t.id',
         [start, end]
       );
-      
       const destinations = await DatabaseService.db.getAllAsync(
         'SELECT destination, COUNT(*) as visit_count FROM trips WHERE start_date >= ? AND start_date <= ? GROUP BY destination ORDER BY visit_count DESC LIMIT 5',
         [start, end]
       );
-      
       setPeriodStats({
         year, month,
         tripCount: trips.length,
@@ -171,7 +141,6 @@ export default function ChartsScreen() {
         totalNotes: trips.reduce((s, t) => s + (t.note_count || 0), 0),
         destinations
       });
-      
       setShowPeriodModal(false);
       Alert.alert('Analisi Completata', `Trovati ${trips.length} viaggi`);
     } catch (error) {
@@ -218,15 +187,12 @@ export default function ChartsScreen() {
       <Text style={[styles.periodBtnText, active && styles.periodBtnTextActive]}>{label}</Text>
     </TouchableOpacity>
   );
-
   return (
     <SafeAreaView style={commonStyles.safeArea}>
       <View style={commonStyles.header}>
         <Text style={commonStyles.headerTitle}>Statistiche</Text>
       </View>
       <ScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />}>
-        
-        {/* Overview */}
         <View style={commonStyles.section}>
           <Text style={commonStyles.sectionTitle}>Panoramica</Text>
           <View style={styles.statsGrid}>
@@ -236,8 +202,6 @@ export default function ChartsScreen() {
             <StatCard icon="location-outline" value={stats?.unique_destinations || 0} label="Destinazioni" color={COLORS.primary} />
           </View>
         </View>
-
-        {/* Heatmap */}
         <View style={commonStyles.section}>
           <Text style={commonStyles.sectionTitle}>Heatmap Località</Text>
           <View style={styles.periodSelector}>
@@ -283,7 +247,6 @@ export default function ChartsScreen() {
           </View>
         </View>
 
-        {/* Analisi Periodo */}
         <View style={commonStyles.section}>
           <View style={commonStyles.spaceBetween}>
             <Text style={commonStyles.sectionTitle}>Analisi Periodo</Text>
@@ -331,7 +294,6 @@ export default function ChartsScreen() {
           )}
         </View>
 
-        {/* Predictions */}
         {predictions?.forecasts && (
           <View style={commonStyles.section}>
             <Text style={commonStyles.sectionTitle}>Previsioni Personalizzate</Text>
@@ -366,14 +328,11 @@ export default function ChartsScreen() {
           </View>
         )}
 
-        {/* Weekly Pattern */}
         {insights?.weeklyPattern?.length > 0 && (
           <View style={commonStyles.section}>
             <Text style={commonStyles.sectionTitle}>Pattern Settimanale</Text>
-            {/* 1. AGGIUNTO alignItems: 'center' PER CENTRARE IL GRAFICO */}
             <View style={commonStyles.box}>
               <BarChart
-                /* 2. USIAMO LA NUOVA FUNZIONE PER I DATI */
                 data={{ labels: ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'], datasets: [{ data: processWeeklyData(insights.weeklyPattern) }] }}
                 width={width - SPACING.lg * 2 - SPACING.lg * 2}
                 height={220} 
@@ -387,7 +346,6 @@ export default function ChartsScreen() {
           </View>
         )}
 
-        {/* Top Destinations */}
         {insights?.topDestinations?.length > 0 && (
           <View style={commonStyles.section}>
             <Text style={commonStyles.sectionTitle}>Destinazioni Preferite</Text>
@@ -406,7 +364,6 @@ export default function ChartsScreen() {
         )}
       </ScrollView>
 
-      {/* Period Modal */}
       <Portal>
         <Modal visible={showPeriodModal} onDismiss={() => setShowPeriodModal(false)} contentContainerStyle={commonStyles.modal}>
           <View style={styles.modalHeader}>
@@ -432,62 +389,49 @@ const styles = StyleSheet.create({
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.md },
   statCard: { width: (width - SPACING.xl * 2 - SPACING.md) / 2, alignItems: 'center', paddingVertical: SPACING.lg },
   statValue: { fontSize: FONT_SIZES.xxxl, fontWeight: FONT_WEIGHTS.bold, color: COLORS.text, marginVertical: SPACING.sm },
-  
   periodSelector: { flexDirection: 'row', gap: SPACING.sm, marginBottom: SPACING.lg },
   periodBtn: { flex: 1, paddingVertical: SPACING.sm, paddingHorizontal: SPACING.md, backgroundColor: COLORS.surfaceVariant, borderRadius: BORDER_RADIUS.md, borderWidth: 2, borderColor: COLORS.borderLight, alignItems: 'center' },
   periodBtnActive: { backgroundColor: COLORS.primary + '20', borderColor: COLORS.primary },
   periodBtnText: { fontSize: FONT_SIZES.sm, fontWeight: FONT_WEIGHTS.semibold, color: COLORS.textSecondary },
   periodBtnTextActive: { color: COLORS.primary },
-  
   heatmapMap: { height: 350, marginBottom: SPACING.lg },
   heatMarker: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: COLORS.white },
   heatMarkerText: { fontSize: FONT_SIZES.sm, fontWeight: FONT_WEIGHTS.bold, color: COLORS.white },
-  
   legend: { marginBottom: SPACING.lg },
   legendTitle: { fontSize: FONT_SIZES.base, fontWeight: FONT_WEIGHTS.semibold, color: COLORS.text, marginBottom: SPACING.md },
   legendRow: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.md },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: SPACING.xs },
   legendDot: { width: 12, height: 12, borderRadius: 6 },
   legendText: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary },
-  
   analyzeBtn: { flexDirection: 'row', alignItems: 'center', gap: SPACING.xs, backgroundColor: COLORS.primary, paddingVertical: SPACING.sm, paddingHorizontal: SPACING.md, borderRadius: BORDER_RADIUS.md },
   analyzeBtnText: { fontSize: FONT_SIZES.sm, fontWeight: FONT_WEIGHTS.semibold, color: COLORS.white },
-  
   periodTitle: { fontSize: FONT_SIZES.xl, fontWeight: FONT_WEIGHTS.bold, color: COLORS.text, marginBottom: SPACING.lg },
   periodStatsRow: { flexDirection: 'row', justifyContent: 'space-around', marginBottom: SPACING.md },
   periodStat: { alignItems: 'center' },
   periodStatValue: { fontSize: FONT_SIZES.xxl, fontWeight: FONT_WEIGHTS.bold, color: COLORS.primary, marginBottom: SPACING.xs },
   periodStatLabel: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary },
   periodSubtitle: { fontSize: FONT_SIZES.base, fontWeight: FONT_WEIGHTS.semibold, color: COLORS.text, marginBottom: SPACING.md },
-  
   destItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: SPACING.sm, borderBottomWidth: 1, borderBottomColor: COLORS.border },
   destName: { fontSize: FONT_SIZES.base, color: COLORS.text },
   destCount: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary },
-  
   noPeriod: { alignItems: 'center', paddingVertical: SPACING.xxxl },
   noPeriodText: { fontSize: FONT_SIZES.base, color: COLORS.textSecondary, textAlign: 'center', marginTop: SPACING.md },
-  
   streak: { flexDirection: 'row', alignItems: 'center', padding: SPACING.lg },
   streakValue: { fontSize: FONT_SIZES.xxl, fontWeight: FONT_WEIGHTS.bold, color: COLORS.tertiary, marginBottom: SPACING.xs },
-  
   predHeader: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md, marginBottom: SPACING.lg },
   predTitle: { fontSize: FONT_SIZES.lg, fontWeight: FONT_WEIGHTS.bold, color: COLORS.text },
   predRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: SPACING.sm },
   predValue: { fontSize: FONT_SIZES.lg, fontWeight: FONT_WEIGHTS.bold, color: COLORS.primary },
   confidence: { marginTop: SPACING.md, paddingVertical: SPACING.sm, paddingHorizontal: SPACING.md, backgroundColor: COLORS.surfaceVariant, borderRadius: BORDER_RADIUS.md, alignSelf: 'flex-start' },
   confidenceText: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, fontWeight: FONT_WEIGHTS.semibold },
-  
   recTitle: { fontSize: FONT_SIZES.lg, fontWeight: FONT_WEIGHTS.bold, color: COLORS.text, marginBottom: SPACING.md },
   rec: { paddingVertical: SPACING.md, borderTopWidth: 1, borderTopColor: COLORS.border },
   recItemTitle: { fontSize: FONT_SIZES.base, fontWeight: FONT_WEIGHTS.semibold, color: COLORS.text, marginBottom: SPACING.xs },
   recDesc: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, lineHeight: 20 },
-
   chart: { marginVertical: SPACING.sm, borderRadius: BORDER_RADIUS.lg, marginLeft: -8,},
-
   destCard: { flexDirection: 'row', alignItems: 'center', padding: SPACING.lg, marginBottom: SPACING.md },
   destRank: { width: 32, height: 32, borderRadius: 16, backgroundColor: COLORS.primary + '20', alignItems: 'center', justifyContent: 'center', marginRight: SPACING.md },
   rankNum: { fontSize: FONT_SIZES.base, fontWeight: FONT_WEIGHTS.bold, color: COLORS.primary },
-  
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.lg },
   label: { fontSize: FONT_SIZES.sm, fontWeight: FONT_WEIGHTS.semibold, color: COLORS.text, marginTop: SPACING.md, marginBottom: SPACING.xs },
   input: { backgroundColor: COLORS.surfaceVariant, borderRadius: BORDER_RADIUS.md, padding: SPACING.md, fontSize: FONT_SIZES.base, color: COLORS.text, borderWidth: 1, borderColor: COLORS.borderLight }

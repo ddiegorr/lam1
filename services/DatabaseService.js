@@ -417,7 +417,7 @@ class DatabaseService {
       const stats = await this.db.getFirstAsync(`
         SELECT 
           SUM(CASE WHEN event_type = 'enter' THEN 1 ELSE 0 END) as enter_count,
-          SUM(CASE WHEN event_type = 'exit' THEN 1 ELSE 0 END) as exit_count,
+          SUM(CASE WHEN event_type = 'exit' THEN 1 ELSE 0 END) as exit_count
         FROM geofence_events 
         WHERE geofence_id = ?
       `, [geofenceId]);

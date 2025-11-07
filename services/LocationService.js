@@ -83,14 +83,30 @@ class LocationService {
 
   async startGeofencingMonitoring() {
     try {
+      // Verifica i permessi prima di procedere
+      const { status } = await Location.getBackgroundPermissionsAsync();
+      
+      if (status !== 'granted') {
+        console.warn('⚠️ Permesso background location non concesso - geofencing non attivo');
+        return; // Esci silenziosamente senza errore
+      }
+
+      // Ferma il monitoraggio esistente se attivo
       const isTaskActive = await Location.hasStartedGeofencingAsync(GEOFENCE_TASK_NAME);
       if (isTaskActive) {
         await Location.stopGeofencingAsync(GEOFENCE_TASK_NAME);
+        console.log('🔄 Geofencing esistente fermato');
       }
+
+      // Recupera i geofences dal database
       const geofences = await DatabaseService.getGeofences();
+      
       if (geofences.length === 0) {
+        console.log('ℹ️ Nessun geofence da monitorare');
         return;
       }
+
+      // Prepara i geofences per il monitoraggio
       const geofencesToMonitor = geofences.map(g => ({
         identifier: g.id.toString(),
         latitude: g.latitude,
@@ -99,9 +115,13 @@ class LocationService {
         notifyOnEnter: true,
         notifyOnExit: true,
       }));
+
+      // Avvia il monitoraggio
       await Location.startGeofencingAsync(GEOFENCE_TASK_NAME, geofencesToMonitor);
+      console.log(`✅ Geofencing avviato per ${geofences.length} aree`);
+      
     } catch (error) {
-      throw error;
+      console.error('❌ Errore startGeofencingMonitoring:', error);
     }
   }
 
