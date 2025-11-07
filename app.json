@@ -1,0 +1,72 @@
+{
+  "expo": {
+    "name": "Travel Companion",
+    "slug": "travel-companion",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.jpg",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/splash.jpg",
+      "resizeMode": "contain",
+      "backgroundColor": "#2F3136"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.progettolam.travelcompanion",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Travel Companion ha bisogno della camera per scattare foto durante i viaggi.",
+        "NSPhotoLibraryUsageDescription": "Travel Companion ha bisogno di accedere alla galleria per salvare e caricare foto.",
+        "NSLocationWhenInUseUsageDescription": "Travel Companion usa la tua posizione per tracciare i tuoi viaggi.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Travel Companion usa la tua posizione anche in background per tracciare i tuoi viaggi.",
+        "NSLocationAlwaysUsageDescription": "Travel Companion usa la tua posizione per tracciare i tuoi viaggi anche quando l'app è in background.",
+        "UIBackgroundModes": ["location"]
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.jpg",
+        "backgroundColor": "#2F3136"
+      },
+      "package": "com.progettolam.travelcompanion",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION",
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/icon.jpg"
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Travel Companion usa la tua posizione per tracciare i tuoi viaggi.",
+          "locationAlwaysPermission": "Travel Companion usa la tua posizione per tracciare i tuoi viaggi anche in background.",
+          "locationWhenInUsePermission": "Travel Companion usa la tua posizione per tracciare i tuoi viaggi."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.jpg",
+          "color": "#5865F2"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Travel Companion ha bisogno di accedere alle foto per salvare i ricordi dei tuoi viaggi.",
+          "cameraPermission": "Travel Companion ha bisogno della camera per scattare foto durante i viaggi."
+        }
+      ]
+    ]
+  }
+}
