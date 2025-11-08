@@ -49,7 +49,6 @@ class LocationAutocompleteService {
         }))
         .slice(0, 5);
     } catch (error) {
-      console.error('Search error:', error.message);
       return [];
     }
   }
@@ -57,12 +56,10 @@ class LocationAutocompleteService {
   formatLocationName(item) {
     const address = item.address;
     const parts = [];
-
     const mainName = address.city || address.town || address.village || address.municipality;
     if (mainName) parts.push(mainName);
     if (address.state && address.state !== mainName) parts.push(address.state);
     if (address.country) parts.push(address.country);
-
     return parts.length > 0 ? parts.join(', ') : item.display_name;
   }
 }

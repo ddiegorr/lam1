@@ -322,7 +322,6 @@ export default function TripsScreen({ navigation }) {
         <Ionicons name="add" size={28} color={COLORS.white} />
       </TouchableOpacity>
 
-      {/* CREATE MODAL */}
       <Portal>
         <PaperModal 
           visible={showCreateModal} 
@@ -392,7 +391,6 @@ export default function TripsScreen({ navigation }) {
             </View>
           )}
 
-          {/* DATA INIZIO */}
           <Text style={styles.label}>Data Inizio *</Text>
           <TouchableOpacity
             style={[
@@ -423,7 +421,6 @@ export default function TripsScreen({ navigation }) {
             </View>
           )}
 
-          {/* DATA FINE */}
           <Text style={styles.label}>Data Fine *</Text>
           <TouchableOpacity
             style={[
@@ -463,7 +460,6 @@ export default function TripsScreen({ navigation }) {
         </PaperModal>
       </Portal>
 
-      {/* DATE PICKERS */}
       {showStartPicker && Platform.OS === 'android' && (
         <DateTimePicker
           value={form.startDate}
@@ -510,13 +506,6 @@ export default function TripsScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  header: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'center', 
-    paddingHorizontal: SPACING.xl, 
-    paddingVertical: SPACING.lg 
-  },
   filterBar: {
     flexDirection: 'row',
     gap: SPACING.sm,
@@ -589,7 +578,6 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.sm, 
     fontWeight: FONT_WEIGHTS.semibold 
   },
-  
   modal: { 
     backgroundColor: COLORS.surface, 
     margin: SPACING.xl, 
@@ -597,7 +585,6 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.lg, 
     maxHeight: 500 
   },
-  
   modalHeader: { 
     flexDirection: 'row', 
     justifyContent: 'space-between', 
@@ -651,14 +638,6 @@ const styles = StyleSheet.create({
   },
   dateTextError: { 
     color: COLORS.error 
-  },
-  datePickerContainer: { 
-    marginTop: SPACING.sm, 
-    backgroundColor: COLORS.surfaceVariant, 
-    borderRadius: BORDER_RADIUS.md, 
-    padding: SPACING.md, 
-    borderWidth: 1, 
-    borderColor: COLORS.primary 
   },
   confirmBtn: { 
     backgroundColor: COLORS.primary, 
@@ -728,12 +707,6 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.sm, 
     color: COLORS.text 
   },
-  filterActive: { 
-    backgroundColor: COLORS.primary + '20', 
-    borderWidth: 1, 
-    borderColor: COLORS.primary 
-  },
-  
   modalContainer: {
     flex: 1,
     justifyContent: 'center',

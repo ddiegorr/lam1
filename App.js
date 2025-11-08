@@ -1,8 +1,4 @@
-// App.js - CORRETTO CON GEOFENCE TASK E NOTIFICHE
-
 import React, { useState, useEffect, useCallback } from 'react';
-import * as TaskManager from 'expo-task-manager';
-import * as Location from 'expo-location';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
@@ -12,74 +8,22 @@ import { StatusBar } from 'expo-status-bar';
 import { View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as SplashScreen from 'expo-splash-screen';
-
-// Import tema centralizzato
 import { COLORS } from './styles/theme';
-
-// Services
 import DatabaseService from './services/DatabaseService';
 import LocationService from './services/LocationService';
 import NotificationService from './services/NotificationService';
-
-// Screens
+import GeofenceMonitoringService from './services/GeofenceMonitoringService';
 import HomeScreen from './screens/HomeScreen';
 import TripsScreen from './screens/TripsScreen';
 import ChartsScreen from './screens/ChartsScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import TripDetailsScreen from './screens/TripDetailsScreen';
 
-const GEOFENCE_TASK_NAME = 'geofence-task';
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
-
-// ⭐ TASK MANAGER PER GEOFENCE - Gestisce entrata/uscita dalle aree
-TaskManager.defineTask(GEOFENCE_TASK_NAME, async ({ data, error }) => {
-  if (error) {
-    console.error('❌ Errore TaskManager Geofence:', error);
-    return;
-  }
-
-  if (data) {
-    const { eventType, region } = data;
-    
-    console.log(`🎯 Geofence Event ricevuto: ${eventType} per ${region.identifier}`);
-    
-    // Inizializza DB e Notifiche se non già fatto
-    if (!DatabaseService.db) {
-      await DatabaseService.init();
-    }
-    if (!NotificationService.isInitialized) {
-      await NotificationService.init();
-    }
-
-    const geofenceId = parseInt(region.identifier, 10);
-    const event = (eventType === Location.GeofencingEventType.Enter) ? 'enter' : 'exit';
-
-    try {
-      // 1. Salva l'evento nel database
-      await DatabaseService.addGeofenceEvent(geofenceId, event);
-      
-      // 2. Trova il nome del Geofence per la notifica
-      const geofences = await DatabaseService.getGeofences();
-      const geofence = geofences.find(g => g.id === geofenceId);
-      const geofenceName = geofence ? geofence.name : 'un\'area';
-
-      // 3. Invia la notifica IMMEDIATA
-      await NotificationService.sendGeofenceNotification(geofenceName, event);
-
-      console.log(`✅ Geofence Event processato: ${event} in ${geofenceName} (ID: ${geofenceId})`);
-      
-    } catch (dbError) {
-      console.error('❌ Errore nel salvare evento geofence:', dbError);
-    }
-  }
-});
-
-// Previeni auto-hide dello splash screen
 SplashScreen.preventAutoHideAsync();
 
-// TEMA DISCORD DARK FISSO
-const discordDarkTheme = {
+const DarkTheme = {
   ...MD3DarkTheme,
   dark: true,
   colors: {
@@ -102,14 +46,12 @@ const discordDarkTheme = {
   },
 };
 
-// TAB NAVIGATOR
 function TabNavigator() {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         tabBarIcon: ({ focused, color }) => {
           let iconName;
-
           if (route.name === 'Home') {
             iconName = focused ? 'home' : 'home-outline';
           } else if (route.name === 'Trips') {
@@ -119,7 +61,6 @@ function TabNavigator() {
           } else if (route.name === 'Settings') {
             iconName = focused ? 'settings' : 'settings-outline';
           }
-
           return <Ionicons name={iconName} size={28} color={color} />;
         },
         tabBarActiveTintColor: COLORS.primary,
@@ -195,57 +136,29 @@ function TabNavigator() {
 
 export default function App() {
   const [appIsReady, setAppIsReady] = useState(false);
-
   useEffect(() => {
     async function prepare() {
       try {
-        console.log('🚀 Inizializzando Travel Companion...');
-        
-        // 1. Inizializza Database
         await DatabaseService.init();
-        console.log('✅ Database inizializzato');
-        
-        // 2. Richiedi permessi localizzazione
         try {
           const permissions = await LocationService.requestPermissions();
-          if (permissions.foreground) {
-            console.log('✅ Permessi localizzazione (Foreground) concessi');
-            
-            // Avvia geofencing se ci sono geofence configurati
-            await LocationService.startGeofencingMonitoring();
-            
-            if (permissions.background) {
-              console.log('✅ Permessi localizzazione (Background) concessi');
-            }
-          }
-        } catch (error) {
-          console.warn('⚠️ Permessi localizzazione non concessi', error);
+        }catch (error){
         }
-        
-        // 3. Inizializza Notifiche
         try {
           await NotificationService.init();
-          
-          // IMPORTANTE: Schedula il reminder SOLO UNA VOLTA qui
-          // NON viene più chiamato in init()
           await NotificationService.ensureDailyReminderIsScheduled();
-          
-          console.log('✅ Notifiche inizializzate');
         } catch (error) {
-          console.log('⚠️ Notifiche non disponibili:', error.message);
         }
-        
-        // 4. Attendi un attimo per completare
+        try {
+          await GeofenceMonitoringService.startMonitoring();
+        } catch (error) {
+        }
         await new Promise(resolve => setTimeout(resolve, 1500));
-        
-        console.log('✅ Inizializzazione completata');
       } catch (error) {
-        console.error('❌ Errore di inizializzazione', error);
       } finally {
         setAppIsReady(true);
       }
     }
-    
     prepare();
   }, []);
 
@@ -254,14 +167,12 @@ export default function App() {
       await SplashScreen.hideAsync();
     }
   }, [appIsReady]);
-
   if (!appIsReady) {
     return null;
   }
-
   return (
     <SafeAreaProvider>
-      <PaperProvider theme={discordDarkTheme}>
+      <PaperProvider theme={DarkTheme}>
         <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
           <NavigationContainer>
             <StatusBar style="light" />

@@ -1,5 +1,5 @@
 import DatabaseService from './DatabaseService';
-import { subMonths } from 'date-fns';
+import {subMonths} from 'date-fns';
 
 class PredictionService {
   constructor() {
@@ -11,22 +11,18 @@ class PredictionService {
     if (this.analysisCache && !this.shouldRefreshAnalysis()) {
       return this.analysisCache;
     }
-    
     return await this.generatePersonalizedPredictions();
   }
 
   async generatePersonalizedPredictions() {
     try {
       const historicalData = await this.getHistoricalTravelData();
-      
       if (historicalData.trips.length < 3) {
         return this.getDefaultPredictions();
       }
-
       const patterns = await this.analyzePersonalTravelPatterns(historicalData);
       const forecasts = await this.generateTravelForecasts(patterns);
       const recommendations = await this.generatePersonalizedRecommendations(patterns, forecasts);
-      
       const predictions = {
         patterns,
         forecasts,
@@ -40,7 +36,6 @@ class PredictionService {
       
       return predictions;
     } catch (error) {
-      console.error('Prediction error:', error);
       return this.getDefaultPredictions();
     }
   }
@@ -48,7 +43,6 @@ class PredictionService {
   async getHistoricalTravelData() {
     try {
       const sixMonthsAgo = subMonths(new Date(), 6).toISOString();
-      
       const trips = await DatabaseService.db.getAllAsync(`
         SELECT t.*, 
                COUNT(j.id) as journey_count,
@@ -59,7 +53,6 @@ class PredictionService {
         GROUP BY t.id
         ORDER BY t.start_date ASC
       `, [sixMonthsAgo]);
-
       const monthlyData = await DatabaseService.db.getAllAsync(`
         SELECT 
           strftime('%Y-%m', t.start_date) as month,
@@ -71,26 +64,21 @@ class PredictionService {
         GROUP BY month
         ORDER BY month ASC
       `, [sixMonthsAgo]);
-
       return { trips, monthlyData };
     } catch (error) {
-      console.error('Get historical data error:', error);
       return { trips: [], monthlyData: [] };
     }
   }
 
   async analyzePersonalTravelPatterns(historicalData) {
     const { trips, monthlyData } = historicalData;
-    
     const avgTripsPerMonth = monthlyData.length > 0 
       ? monthlyData.reduce((sum, m) => sum + m.trip_count, 0) / monthlyData.length 
       : 0;
-
     const typePreferences = trips.reduce((acc, trip) => {
       acc[trip.type] = (acc[trip.type] || 0) + 1;
       return acc;
     }, {});
-
     return {
       frequency: { avgTripsPerMonth, consistency: 'medium' },
       typePreferences: Object.entries(typePreferences).map(([type, count]) => ({
@@ -109,7 +97,6 @@ class PredictionService {
   async generateTravelForecasts(patterns) {
     const predictedTripsNextMonth = Math.round(patterns.frequency.avgTripsPerMonth);
     const predictedDistance = patterns.distance.avgDistance * predictedTripsNextMonth;
-
     return {
       nextMonth: {
         predictedTrips: predictedTripsNextMonth,
@@ -121,7 +108,6 @@ class PredictionService {
 
   async generatePersonalizedRecommendations(patterns, forecasts) {
     const recommendations = [];
-
     if (forecasts.nextMonth.predictedTrips < 2) {
       recommendations.push({
         type: 'activity',

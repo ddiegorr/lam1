@@ -43,7 +43,6 @@ export default function ChartsScreen() {
       setInsights(insightsData);
       await loadHeatmapData(heatmapPeriod);
     } catch (error) {
-      console.error('Error loading statistics:', error);
     } finally {
       setLoading(false);
     }
@@ -59,6 +58,7 @@ export default function ChartsScreen() {
     }
     return weeklyCounts;
   };
+
   const loadHeatmapData = async (period) => {
     try {
       const days = period === 'week' ? 7 : period === 'month' ? 30 : 365;
@@ -144,7 +144,6 @@ export default function ChartsScreen() {
       setShowPeriodModal(false);
       Alert.alert('Analisi Completata', `Trovati ${trips.length} viaggi`);
     } catch (error) {
-      console.error('Error analyzing period:', error);
       Alert.alert('Errore', 'Impossibile analizzare il periodo');
     }
   };
@@ -163,7 +162,6 @@ export default function ChartsScreen() {
     style: { borderRadius: BORDER_RADIUS.lg },
     propsForDots: { r: '4', strokeWidth: '2', stroke: COLORS.primary },
   };
-
   if (loading) {
     return (
       <SafeAreaView style={commonStyles.safeArea}>
@@ -173,7 +171,6 @@ export default function ChartsScreen() {
       </SafeAreaView>
     );
   }
-
   const StatCard = ({ icon, value, label, color }) => (
     <View style={[commonStyles.box, styles.statCard]}>
       <Ionicons name={icon} size={24} color={color} />
@@ -181,7 +178,6 @@ export default function ChartsScreen() {
       <Text style={commonStyles.statLabel}>{label}</Text>
     </View>
   );
-
   const PeriodButton = ({ label, active, onPress }) => (
     <TouchableOpacity style={[styles.periodBtn, active && styles.periodBtnActive]} onPress={onPress}>
       <Text style={[styles.periodBtnText, active && styles.periodBtnTextActive]}>{label}</Text>
@@ -368,9 +364,6 @@ export default function ChartsScreen() {
         <Modal visible={showPeriodModal} onDismiss={() => setShowPeriodModal(false)} contentContainerStyle={commonStyles.modal}>
           <View style={styles.modalHeader}>
             <Text style={commonStyles.modalTitle}>Seleziona Periodo</Text>
-            <TouchableOpacity style={commonStyles.buttonClose} onPress={() => setShowPeriodModal(false)}>
-              <Ionicons name="close" size={20} color={COLORS.error} />
-            </TouchableOpacity>
           </View>
           <Text style={styles.label}>Anno</Text>
           <TextInput style={styles.input} value={selectedYear} onChangeText={setSelectedYear} placeholder="2024" placeholderTextColor={COLORS.textTertiary} keyboardType="numeric" />
@@ -386,53 +379,267 @@ export default function ChartsScreen() {
 }
 
 const styles = StyleSheet.create({
-  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.md },
-  statCard: { width: (width - SPACING.xl * 2 - SPACING.md) / 2, alignItems: 'center', paddingVertical: SPACING.lg },
-  statValue: { fontSize: FONT_SIZES.xxxl, fontWeight: FONT_WEIGHTS.bold, color: COLORS.text, marginVertical: SPACING.sm },
-  periodSelector: { flexDirection: 'row', gap: SPACING.sm, marginBottom: SPACING.lg },
-  periodBtn: { flex: 1, paddingVertical: SPACING.sm, paddingHorizontal: SPACING.md, backgroundColor: COLORS.surfaceVariant, borderRadius: BORDER_RADIUS.md, borderWidth: 2, borderColor: COLORS.borderLight, alignItems: 'center' },
-  periodBtnActive: { backgroundColor: COLORS.primary + '20', borderColor: COLORS.primary },
-  periodBtnText: { fontSize: FONT_SIZES.sm, fontWeight: FONT_WEIGHTS.semibold, color: COLORS.textSecondary },
-  periodBtnTextActive: { color: COLORS.primary },
-  heatmapMap: { height: 350, marginBottom: SPACING.lg },
-  heatMarker: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: COLORS.white },
-  heatMarkerText: { fontSize: FONT_SIZES.sm, fontWeight: FONT_WEIGHTS.bold, color: COLORS.white },
-  legend: { marginBottom: SPACING.lg },
-  legendTitle: { fontSize: FONT_SIZES.base, fontWeight: FONT_WEIGHTS.semibold, color: COLORS.text, marginBottom: SPACING.md },
-  legendRow: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.md },
-  legendItem: { flexDirection: 'row', alignItems: 'center', gap: SPACING.xs },
-  legendDot: { width: 12, height: 12, borderRadius: 6 },
-  legendText: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary },
-  analyzeBtn: { flexDirection: 'row', alignItems: 'center', gap: SPACING.xs, backgroundColor: COLORS.primary, paddingVertical: SPACING.sm, paddingHorizontal: SPACING.md, borderRadius: BORDER_RADIUS.md },
-  analyzeBtnText: { fontSize: FONT_SIZES.sm, fontWeight: FONT_WEIGHTS.semibold, color: COLORS.white },
-  periodTitle: { fontSize: FONT_SIZES.xl, fontWeight: FONT_WEIGHTS.bold, color: COLORS.text, marginBottom: SPACING.lg },
-  periodStatsRow: { flexDirection: 'row', justifyContent: 'space-around', marginBottom: SPACING.md },
-  periodStat: { alignItems: 'center' },
-  periodStatValue: { fontSize: FONT_SIZES.xxl, fontWeight: FONT_WEIGHTS.bold, color: COLORS.primary, marginBottom: SPACING.xs },
-  periodStatLabel: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary },
-  periodSubtitle: { fontSize: FONT_SIZES.base, fontWeight: FONT_WEIGHTS.semibold, color: COLORS.text, marginBottom: SPACING.md },
-  destItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: SPACING.sm, borderBottomWidth: 1, borderBottomColor: COLORS.border },
-  destName: { fontSize: FONT_SIZES.base, color: COLORS.text },
-  destCount: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary },
-  noPeriod: { alignItems: 'center', paddingVertical: SPACING.xxxl },
-  noPeriodText: { fontSize: FONT_SIZES.base, color: COLORS.textSecondary, textAlign: 'center', marginTop: SPACING.md },
-  streak: { flexDirection: 'row', alignItems: 'center', padding: SPACING.lg },
-  streakValue: { fontSize: FONT_SIZES.xxl, fontWeight: FONT_WEIGHTS.bold, color: COLORS.tertiary, marginBottom: SPACING.xs },
-  predHeader: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md, marginBottom: SPACING.lg },
-  predTitle: { fontSize: FONT_SIZES.lg, fontWeight: FONT_WEIGHTS.bold, color: COLORS.text },
-  predRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: SPACING.sm },
-  predValue: { fontSize: FONT_SIZES.lg, fontWeight: FONT_WEIGHTS.bold, color: COLORS.primary },
-  confidence: { marginTop: SPACING.md, paddingVertical: SPACING.sm, paddingHorizontal: SPACING.md, backgroundColor: COLORS.surfaceVariant, borderRadius: BORDER_RADIUS.md, alignSelf: 'flex-start' },
-  confidenceText: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, fontWeight: FONT_WEIGHTS.semibold },
-  recTitle: { fontSize: FONT_SIZES.lg, fontWeight: FONT_WEIGHTS.bold, color: COLORS.text, marginBottom: SPACING.md },
-  rec: { paddingVertical: SPACING.md, borderTopWidth: 1, borderTopColor: COLORS.border },
-  recItemTitle: { fontSize: FONT_SIZES.base, fontWeight: FONT_WEIGHTS.semibold, color: COLORS.text, marginBottom: SPACING.xs },
-  recDesc: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, lineHeight: 20 },
-  chart: { marginVertical: SPACING.sm, borderRadius: BORDER_RADIUS.lg, marginLeft: -8,},
-  destCard: { flexDirection: 'row', alignItems: 'center', padding: SPACING.lg, marginBottom: SPACING.md },
-  destRank: { width: 32, height: 32, borderRadius: 16, backgroundColor: COLORS.primary + '20', alignItems: 'center', justifyContent: 'center', marginRight: SPACING.md },
-  rankNum: { fontSize: FONT_SIZES.base, fontWeight: FONT_WEIGHTS.bold, color: COLORS.primary },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.lg },
-  label: { fontSize: FONT_SIZES.sm, fontWeight: FONT_WEIGHTS.semibold, color: COLORS.text, marginTop: SPACING.md, marginBottom: SPACING.xs },
-  input: { backgroundColor: COLORS.surfaceVariant, borderRadius: BORDER_RADIUS.md, padding: SPACING.md, fontSize: FONT_SIZES.base, color: COLORS.text, borderWidth: 1, borderColor: COLORS.borderLight }
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: SPACING.md
+  },
+  statCard: {
+    width: (width - SPACING.xl * 2 - SPACING.md) / 2,
+    alignItems: 'center',
+    paddingVertical: SPACING.lg
+  },
+  statValue: {
+    fontSize: FONT_SIZES.xxxl,
+    fontWeight: FONT_WEIGHTS.bold,
+    color: COLORS.text,
+    marginVertical: SPACING.sm
+  },
+  periodSelector: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+    marginBottom: SPACING.lg
+  },
+  periodBtn: {
+    flex: 1,
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    backgroundColor: COLORS.surfaceVariant,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 2,
+    borderColor: COLORS.borderLight,
+    alignItems: 'center'
+  },
+  periodBtnActive: {
+    backgroundColor: COLORS.primary + '20',
+    borderColor: COLORS.primary
+  },
+  periodBtnText: {
+    fontSize: FONT_SIZES.sm,
+    fontWeight: FONT_WEIGHTS.semibold,
+    color: COLORS.textSecondary
+  },
+  periodBtnTextActive: {
+    color: COLORS.primary
+  },
+  heatmapMap: {
+    height: 350,
+    marginBottom: SPACING.lg
+  },
+  heatMarker: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: COLORS.white
+  },
+  heatMarkerText: {
+    fontSize: FONT_SIZES.sm,
+    fontWeight: FONT_WEIGHTS.bold,
+    color: COLORS.white
+  },
+  legend: {
+    marginBottom: SPACING.lg
+  },
+  legendTitle: {
+    fontSize: FONT_SIZES.base,
+    fontWeight: FONT_WEIGHTS.semibold,
+    color: COLORS.text,
+    marginBottom: SPACING.md
+  },
+  legendRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: SPACING.md
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs
+  },
+  legendDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6
+  },
+  legendText: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.textSecondary
+  },
+  analyzeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+    backgroundColor: COLORS.primary,
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    borderRadius: BORDER_RADIUS.md
+  },
+  analyzeBtnText: {
+    fontSize: FONT_SIZES.sm,
+    fontWeight: FONT_WEIGHTS.semibold,
+    color: COLORS.white
+  },
+  periodTitle: {
+    fontSize: FONT_SIZES.xl,
+    fontWeight: FONT_WEIGHTS.bold,
+    color: COLORS.text,
+    marginBottom: SPACING.lg
+  },
+  periodStatsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: SPACING.md
+  },
+  periodStat: {
+    alignItems: 'center'
+  },
+  periodStatValue: {
+    fontSize: FONT_SIZES.xxl,
+    fontWeight: FONT_WEIGHTS.bold,
+    color: COLORS.primary,
+    marginBottom: SPACING.xs
+  },
+  periodStatLabel: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.textSecondary
+  },
+  periodSubtitle: {
+    fontSize: FONT_SIZES.base,
+    fontWeight: FONT_WEIGHTS.semibold,
+    color: COLORS.text,
+    marginBottom: SPACING.md
+  },
+  destItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: SPACING.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border
+  },
+  destName: {
+    fontSize: FONT_SIZES.base,
+    color: COLORS.text
+  },
+  destCount: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.textSecondary
+  },
+  noPeriod: {
+    alignItems: 'center',
+    paddingVertical: SPACING.xxxl
+  },
+  noPeriodText: {
+    fontSize: FONT_SIZES.base,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    marginTop: SPACING.md
+  },
+  predHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.md,
+    marginBottom: SPACING.lg
+  },
+  predTitle: {
+    fontSize: FONT_SIZES.lg,
+    fontWeight: FONT_WEIGHTS.bold,
+    color: COLORS.text
+  },
+  predRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: SPACING.sm
+  },
+  predValue: {
+    fontSize: FONT_SIZES.lg,
+    fontWeight: FONT_WEIGHTS.bold,
+    color: COLORS.primary
+  },
+  confidence: {
+    marginTop: SPACING.md,
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    backgroundColor: COLORS.surfaceVariant,
+    borderRadius: BORDER_RADIUS.md,
+    alignSelf: 'flex-start'
+  },
+  confidenceText: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.textSecondary,
+    fontWeight: FONT_WEIGHTS.semibold
+  },
+  recTitle: {
+    fontSize: FONT_SIZES.lg,
+    fontWeight: FONT_WEIGHTS.bold,
+    color: COLORS.text,
+    marginBottom: SPACING.md
+  },
+  rec: {
+    paddingVertical: SPACING.md,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border
+  },
+  recItemTitle: {
+    fontSize: FONT_SIZES.base,
+    fontWeight: FONT_WEIGHTS.semibold,
+    color: COLORS.text,
+    marginBottom: SPACING.xs
+  },
+  recDesc: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.textSecondary,
+    lineHeight: 20
+  },
+  chart: {
+    marginVertical: SPACING.sm,
+    borderRadius: BORDER_RADIUS.lg,
+    marginLeft: -8,
+  },
+  destCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: SPACING.lg,
+    marginBottom: SPACING.md
+  },
+  destRank: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: COLORS.primary + '20',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: SPACING.md
+  },
+  rankNum: {
+    fontSize: FONT_SIZES.base,
+    fontWeight: FONT_WEIGHTS.bold,
+    color: COLORS.primary
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: SPACING.lg
+  },
+  label: {
+    fontSize: FONT_SIZES.sm,
+    fontWeight: FONT_WEIGHTS.semibold,
+    color: COLORS.text,
+    marginTop: SPACING.md,
+    marginBottom: SPACING.xs
+  },
+  input: {
+    backgroundColor: COLORS.surfaceVariant,
+    borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.md,
+    fontSize: FONT_SIZES.base,
+    color: COLORS.text,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight
+  }
 });

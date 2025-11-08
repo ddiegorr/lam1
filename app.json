@@ -22,7 +22,6 @@
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Travel Companion usa la tua posizione anche in background per tracciare i tuoi viaggi.",
         "NSLocationAlwaysUsageDescription": "Travel Companion usa la tua posizione per tracciare i tuoi viaggi anche quando l'app è in background.",
         "UIBackgroundModes": [
-          "location",
           "location"
         ],
         "ITSAppUsesNonExemptEncryption": false
@@ -41,8 +40,7 @@
         "android.permission.FOREGROUND_SERVICE_LOCATION",
         "android.permission.CAMERA",
         "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.WRITE_EXTERNAL_STORAGE",
-        "android.permission.RECORD_AUDIO"
+        "android.permission.WRITE_EXTERNAL_STORAGE"
       ]
     },
     "plugins": [

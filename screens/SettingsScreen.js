@@ -1,7 +1,6 @@
 import { useFocusEffect } from '@react-navigation/native';
 import React, { useState, useCallback } from 'react';
-import {View, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert, TextInput,
-} from 'react-native';
+import {View, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert, TextInput} from 'react-native';
 import { Text, Portal, Modal, ActivityIndicator } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,6 +10,7 @@ import GeofenceCard from '../components/GeofenceCard';
 import DatabaseService from '../services/DatabaseService';
 import NotificationService from '../services/NotificationService';
 import LocationService from '../services/LocationService';
+import GeofenceMonitoringService from '../services/GeofenceMonitoringService';
 
 export default function SettingsScreen() {
   const [loading, setLoading] = useState(true);
@@ -33,14 +33,10 @@ export default function SettingsScreen() {
         const allGeofences = await DatabaseService.getGeofences();
         setGeofences(allGeofences || []);
       } catch (error) {
-        console.error('Errore caricamento geofences:', error);
         setGeofences([]);
       }
-      
       setNotificationsEnabled(true);
-      
     } catch (error) {
-      console.error('Errore caricamento settings:', error);
       Alert.alert('Errore', 'Impossibile caricare le impostazioni');
     } finally {
       setLoading(false);
@@ -57,7 +53,6 @@ export default function SettingsScreen() {
         Alert.alert('Notifiche', 'Notifiche disabilitate');
       }
     } catch (error) {
-      console.error('Errore toggle notifiche:', error);
       Alert.alert('Errore', 'Impossibile modificare le notifiche');
     }
   };
@@ -73,32 +68,24 @@ export default function SettingsScreen() {
       Alert.alert('Errore', 'Inserisci un nome per il geofence');
       return;
     }
-
     const radius = parseFloat(geofenceRadius);
     if (isNaN(radius) || radius < 50 || radius > 5000) {
       Alert.alert('Errore', 'Il raggio deve essere tra 50 e 5000 metri');
       return;
     }
-
     try {
       const location = await LocationService.getCurrentLocation();
-      
       await DatabaseService.addGeofence(
         geofenceName.trim(),
         location.coords.latitude,
         location.coords.longitude,
         radius
       );
-      
       setShowGeofenceModal(false);
       await loadSettings();
-      
-      // Riavvia il geofencing con i nuovi geofence
-      await LocationService.startGeofencingMonitoring();
-      
-      Alert.alert('✅ Successo', 'Geofence creato nella tua posizione attuale');
+      await GeofenceMonitoringService.reloadGeofences();
+      Alert.alert('Creato', 'Geofence creato nella tua posizione attuale');
     } catch (error) {
-      console.error('Errore salvataggio geofence:', error);
       Alert.alert('Errore', 'Impossibile salvare il geofence. Assicurati che i permessi di localizzazione siano attivi.');
     }
   };
@@ -117,11 +104,8 @@ export default function SettingsScreen() {
               await DatabaseService.deleteGeofence(geofence.id);
               Alert.alert('Successo', 'Geofence eliminato');
               await loadSettings();
-              
-              // Riavvia il geofencing per aggiornare
-              await LocationService.startGeofencingMonitoring();
+              await GeofenceMonitoringService.reloadGeofences();
             } catch (error) {
-              console.error('Errore eliminazione geofence', error);
               Alert.alert('Errore', 'Impossibile eliminare il geofence');
             }
           }
@@ -134,16 +118,14 @@ export default function SettingsScreen() {
     try {
       const stats = await DatabaseService.getGeofenceStats(geofence.id);
       Alert.alert(
-        `📊 Statistiche: ${geofence.name}`,
-        `✅ Entrate: ${stats.enterCount}\n` +
-        `🚶 Uscite: ${stats.exitCount}`
+        `Statistiche ${geofence.name}`,
+        `Entrate: ${stats.enterCount}\n` +
+        `Uscite: ${stats.exitCount}`
       );
     } catch (error) {
-      console.error('Errore statistiche geofence', error);
       Alert.alert('Errore', 'Impossibile recuperare le statistiche');
     }
   };
-
   if (loading) {
     return (
       <SafeAreaView style={commonStyles.safeArea}>
@@ -153,13 +135,11 @@ export default function SettingsScreen() {
       </SafeAreaView>
     );
   }
-
   return (
     <SafeAreaView style={commonStyles.safeArea}>
       <View style={commonStyles.header}>
         <Text style={commonStyles.headerTitle}>Impostazioni</Text>
       </View>
-      
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={commonStyles.section}>
           <Text style={commonStyles.sectionTitle}>Notifiche</Text>
@@ -194,7 +174,6 @@ export default function SettingsScreen() {
               <Ionicons name="add" size={18} color={COLORS.white} marginLeft={11} />
             </TouchableOpacity>
           </View>
-
           {geofences.length === 0 ? (
             <View style={[commonStyles.box, styles.emptyGeofences]}>
               <Ionicons name="location-outline" size={48} color={COLORS.textSecondary} />

@@ -1,23 +1,12 @@
-// screens/TripDetailsScreen.js - CON STATISTICHE QUADRATE E POP-UP
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Dimensions,
-  Image,
-  FlatList,
-} from 'react-native';
+import {View, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Image, FlatList} from 'react-native';
 import { Text, ActivityIndicator, Portal, Modal } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MapView, { Polyline, Marker } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
-
 import { COLORS, SPACING, BORDER_RADIUS, FONT_SIZES, FONT_WEIGHTS, MAP_DARK_STYLE } from '../styles/theme';
 import { commonStyles } from '../styles/commonStyles';
 import EmptyState from '../components/EmptyState';
-
 import DatabaseService from '../services/DatabaseService';
 
 const { width } = Dimensions.get('window');
@@ -31,8 +20,6 @@ export default function TripDetailsScreen({ route, navigation }) {
   const [notes, setNotes] = useState([]);
   const [routeCoordinates, setRouteCoordinates] = useState([]);
   const [mapRegion, setMapRegion] = useState(null);
-  
-  // Modal states
   const [selectedPhoto, setSelectedPhoto] = useState(null);
   const [selectedNote, setSelectedNote] = useState(null);
   const [showPhotosModal, setShowPhotosModal] = useState(false);
@@ -88,7 +75,6 @@ export default function TripDetailsScreen({ route, navigation }) {
       }
 
     } catch (error) {
-      console.error('Error loading trip details:', error);
     } finally {
       setLoading(false);
     }
@@ -134,12 +120,10 @@ export default function TripDetailsScreen({ route, navigation }) {
         totalMs += (end - start);
       }
     });
-
     const hours = Math.floor(totalMs / (1000 * 60 * 60));
     const minutes = Math.floor((totalMs % (1000 * 60 * 60)) / (1000 * 60));
     return `${hours}h ${minutes}m`;
   };
-
   if (loading) {
     return (
       <SafeAreaView style={commonStyles.safeArea}>
@@ -149,7 +133,6 @@ export default function TripDetailsScreen({ route, navigation }) {
       </SafeAreaView>
     );
   }
-
   if (!trip) {
     return (
       <SafeAreaView style={commonStyles.safeArea}>
@@ -161,7 +144,6 @@ export default function TripDetailsScreen({ route, navigation }) {
       </SafeAreaView>
     );
   }
-
   return (
     <SafeAreaView style={commonStyles.safeArea}>
     <View style={commonStyles.header}>
@@ -183,7 +165,6 @@ export default function TripDetailsScreen({ route, navigation }) {
           </View>
         </View>
 
-        {/* Map con Foto e Note */}
         {mapRegion && routeCoordinates.length > 0 && (
           <View style={commonStyles.section}>
             <Text style={commonStyles.sectionTitle}>Percorso</Text>
